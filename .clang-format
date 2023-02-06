@@ -1,0 +1,6 @@
+Language: Cpp
+BasedOnStyle: Google
+AlignAfterOpenBracket: BlockIndent
+AlignConsecutiveBitFields: Consecutive
+ColumnLimit: 120
+IndentWidth: 4
