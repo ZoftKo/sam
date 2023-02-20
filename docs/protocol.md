@@ -8,25 +8,25 @@ sequence of four zeros (0000) a 1 must be inserted (00001).
 
 Bit stuffing is also used to prevent a continuous run of 1s from
 being interpreted as a frame start/end. A sequence of more than 7 continuous 1s needs to have a
-zero added to it. For example, if you wanted to transmit 0xFF the encoded bits would be 0xFE1.
+zero added to it. For example, if you wanted to transmit 0xFF the encoded bits would be 0xFE8.
 
 ## Frames
 A total of 6 bytes are used for housekeeping per frame. Each frame can contain (theoretically) up to 4096 bits of
 payload (4k bytes). The format is the following:
 
-| Start Flag    | To     | From   | Type   | Size        | Payload | CRC     |
-|---------------|--------|--------|--------|-------------|---------|---------|
- | 1 byte (0xFF) | 4 bits | 4 bits | 4 bits | 12 bits (N) | N bytes | 2 bytes |
+| Start Flag    | To     | From   | Type   | Size        | Payload               | CRC     |
+|---------------|--------|--------|--------|-------------|-----------------------|---------|
+ | 1 byte (0xFF) | 4 bits | 4 bits | 4 bits | 12 bits (N) | N bytes (min. 1 byte) | 2 bytes |
 
 ## Message types
 The following message types are reserved and should be interpreted in the same way by all implementations. The
 rest can be implementation dependent.
 
-| Bits | Type  | Meaning                                                                                      |
-|------|-------|----------------------------------------------------------------------------------------------|
-| 0x00 | NULL  | Has no meaning and should not be used                                                        |
-| 0x01 | TXRQ  | Request for a bus slave to transmit. Payload is implementation dependent and it may be empty |
-| 0x02 | ASCII | Interpreted as ASCII text                                                                    |
+| Bits | Type  | Meaning                                                                  |
+|------|-------|--------------------------------------------------------------------------|
+| 0x00 | NULL  | Has no meaning and should not be used                                    |
+| 0x01 | TXRQ  | Request for a bus slave to transmit. Payload is implementation dependent |
+| 0x02 | ASCII | Interpreted as ASCII text                                                |
 
 ## Communication Scheme
 The network is a bus consisting of slaves and a controlling unit (CU). Communications can only be started by the CU,
