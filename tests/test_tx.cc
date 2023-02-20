@@ -1,5 +1,3 @@
-#include <cstdint>
-
 #include "gtest/gtest.h"
 
 extern "C" {
@@ -8,24 +6,23 @@ extern "C" {
 
 class TestBasebandTx : public testing::Test {
    protected:
-    uint8_t port;
+    uint8_t port = 0x00;
     const uint8_t pin = 0;
 
-    void SetUp() override {
-        port = 0x00;
-        tx_setup(&port, pin);
-    }
+    void SetUp() override { tx_setup(&port, pin, nullptr); }
 
     /**
      * Transmit the specified data and store the transmitted bytes. This means transmitted bytes
      * may contain extra bits as the result of bit stuffing.
-     * @param buffer Transmitted bytes will be stored in this buffer. Bytes are grouped from left to right (MSB to LSB),
-     * and bits shifted from right to left as they are received.
+     * @param buffer Transmitted bytes will be stored in this buffer. Bytes are grouped from left to
+     * right (MSB to LSB), and bits shifted from right to left as they are received.
      * @param data Bytes to be transmitted
      * @param data_size Amount of bytes to be transmitted
      * @param tx_func Function that will be used to transmit data
      */
-    void runTxAndStore(uint8_t *buffer, uint8_t *data, uint8_t data_size, uint8_t (*tx_func)(uint8_t)) {
+    void runTxAndStore(
+        uint8_t *buffer, uint8_t *data, uint8_t data_size, uint8_t (*tx_func)(uint8_t)
+    ) {
         uint8_t tx_state, tx_end, counter, curr_block, curr_buffer, tx_global_end;
         tx_end = counter = curr_block = curr_buffer = 0;
 
@@ -53,14 +50,14 @@ class TestBasebandTx : public testing::Test {
 };
 
 TEST_F(TestBasebandTx, RegisterTxFrame) {
-    struct Frame frame {};
-    ASSERT_EQ(tx_frame(frame), 0);
+    Frame frame{};
+    ASSERT_EQ(tx_frame(&frame), 0);
 }
 
 TEST_F(TestBasebandTx, RegisterTxFrameBusy) {
-    struct Frame frame {};
-    ASSERT_EQ(tx_frame(frame), 0);
-    ASSERT_EQ(tx_frame(frame), 1);
+    Frame frame{};
+    ASSERT_EQ(tx_frame(&frame), 0);
+    ASSERT_EQ(tx_frame(&frame), 1);
 }
 
 TEST_F(TestBasebandTx, TxBitZeroRun) {
@@ -146,12 +143,12 @@ TEST_F(TestBasebandTx, TxBytesWithZeroRun) {
 
 TEST_F(TestBasebandTx, TxFrameTXRQ) {
     uint8_t payload[1] = {0xAA};
-    struct Frame frame = {
+    Frame frame = {
         .address = {.to = 0x07, .from = 0x01},
         .dinfo = {.type = TXRQ, .size = 0x01},
         .payload = payload,
         .crc = 0x5555};
-    ASSERT_EQ(0, tx_frame(frame));
+    ASSERT_EQ(0, tx_frame(&frame));
 
     uint8_t tx_state, end, buffer_idx;
     uint8_t buffer[8] = {0};

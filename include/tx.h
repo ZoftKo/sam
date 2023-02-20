@@ -1,40 +1,19 @@
-#ifndef BBTX_TX_GUARD
-#define BBTX_TX_GUARD
+#ifndef SAM_TX_H
+#define SAM_TX_H
 
 #include <stdint.h>
 
-extern const uint8_t ONE_LIMIT;
-extern const uint8_t ZERO_LIMIT;
-
-enum MessageType {
-    TXRQ = 0x01,
-    ASCII = 0x2,
-};
-
-struct AddressHeader {
-    uint8_t to   : 4;
-    uint8_t from : 4;
-};
-
-struct DInfoHeader {
-    enum MessageType type : 4;
-    uint16_t size         : 12;
-};
-
-struct Frame {
-    struct AddressHeader address;
-    struct DInfoHeader dinfo;
-    uint8_t *payload;
-    uint16_t crc;
-};
-
+#include "frame.h"
 /**
  * Sets transmitter parameters and initializes it to a clear IDLE state. This means
  * it will be ready to admit frames for transmission after this call, and any previous
  * state and transmission data will be lost. Any ongoing transmission will stop after
  * this method is called.
+ *
+ * @param port Address that represents the physical I/O port to be used
+ * @param pin
  * */
-void tx_setup(volatile uint8_t *port, uint8_t bit);
+void tx_setup(volatile uint8_t *port, uint8_t pin, void (*on_error)(void));
 
 /**
  * Writes a single bit to the transmission channel while taking
@@ -68,7 +47,7 @@ uint8_t tx_byte(uint8_t byte);
  * @return 0 if the machine has reached IDLE state after execution.
  * Non-zero otherwise.
  * */
-uint8_t tx_next();
+uint8_t tx_next(void);
 
 /**
  * Prepare the transmitter's state machine to transmit the given frame.
@@ -81,6 +60,6 @@ uint8_t tx_next();
  * @return 0 if the frame has been accepted and is ready for transmission.
  * Non-zero otherwise.
  * */
-uint8_t tx_frame(struct Frame frame);
+uint8_t tx_frame(const struct Frame *frame);
 
 #endif
