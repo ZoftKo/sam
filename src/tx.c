@@ -6,10 +6,10 @@ enum DATA_TYPE { TO, FROM, TYPE, SIZE, PAYLOAD, CRC };
 static enum STATE state;
 static enum DATA_TYPE current_data;
 
-const uint8_t ONE_LIMIT = 5;
+const uint8_t ONE_LIMIT = 7;
 const uint8_t ZERO_LIMIT = 4;
 
-static uint8_t psym, one_count, zero_count;
+static uint8_t one_count, zero_count;
 
 static uint8_t _txpbit;
 static volatile uint8_t *_txport;
@@ -21,7 +21,6 @@ static void reset() {
     current_data = TO;
     one_count = 0;
     zero_count = 0;
-    psym = 2;
 }
 
 static void writebit(uint8_t bit) {
@@ -33,11 +32,9 @@ static void writebit(uint8_t bit) {
 }
 
 static void tx_start_sequence() {
-    if (one_count < 7) {
-        writebit(1);
-        one_count++;
-    } else {
-        writebit(0);
+    writebit(1);
+    one_count++;
+    if (one_count == 8) {
         one_count = 0;
         state = TRANSMIT;
     }
@@ -51,6 +48,7 @@ static uint8_t tx_payload() {
         if (index < _frame.dinfo.size) {
             return 1;
         } else {
+            index = 0;
             return 0;
         }
     }
@@ -78,21 +76,14 @@ uint8_t tx_bit(uint8_t bit) {
 
     if (bit == 1) {
         writebit(1);
-        if (psym != 0) {
-            one_count++;
-        } else {
-            one_count = 1;
-        }
+        one_count++;
+        zero_count = 0;
     }
     if (bit == 0) {
         writebit(0);
-        if (psym != 1) {
-            zero_count++;
-        } else {
-            zero_count = 1;
-        }
+        zero_count++;
+        one_count = 0;
     }
-    psym = bit;
 
     return 0;
 }
