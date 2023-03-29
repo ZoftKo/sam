@@ -13,20 +13,24 @@
 #include "tx.h"
 #include "usart.h"
 
-#define UP_CHAR_BTN PINC1
-#define ERASE_CHAR_BTN PINC2
-#define SET_CHAR_BTN PINC3
+#define SET_CHAR_BTN PINC1
+#define ERASE_CHAR_BTN PINC5
 #define TX_BTN PINC4
 
-#define CLOCK_PIN PIND2
-#define DATA_PIN PIND3
+#define ENCODER_A PIND3
+#define ENCODER_B PIND2
+#define DISABLE_ENCODER EIMSK = 0x00
+#define ENABLE_ENCODER EIMSK = 0x03
 
-#define AVAILABLE_CHAR_COUNT 36
+#define CLOCK_PIN PIND4
+#define DATA_PIN PIND5
+
+#define AVAILABLE_CHAR_COUNT 37
 
 // clang-format off
 const char AVAILABLE_CHARS[AVAILABLE_CHAR_COUNT] = {
     ' ', 'a', 'b', 'c', 'd','e', 'f', 'g', 'h', 'i',
-    'k', 'l', 'm', 'n', 'o','p', 'q', 'r', 's',
+'j', 'k', 'l', 'm', 'n', 'o','p', 'q', 'r', 's',
     't','u', 'v', 'w', 'x', 'y', 'z','0', '1',
     '2', '3', '4', '5', '6', '7', '8', '9'
 };
@@ -36,6 +40,10 @@ char text_buffer[33] = "tx hello";
 char print_buffer[32] = {0};
 
 uint8_t is_rz = 0;
+
+struct EncoderStatus {
+    uint8_t update_char : 1;
+} encoder_status;
 
 struct Frame frame = {
     .address = {.from = 0x01, .to = 0x07},
@@ -61,15 +69,12 @@ void next_char(void) {
     }
 }
 
-uint8_t is_pressed(volatile uint8_t *address, uint8_t pin) {
-    if (read_bit(address, pin) == 0) {
-        _delay_ms(DEBOUNCE_DELAY);
-        if (read_bit(address, pin) == 0) {
-            return 1;
-        }
+void prev_char(void) {
+    if (current_char == 0) {
+        current_char = AVAILABLE_CHAR_COUNT - 1;
+    } else {
+        current_char--;
     }
-
-    return 0;
 }
 
 uint8_t was_clicked(volatile uint8_t *address, uint8_t pin) {
@@ -117,10 +122,12 @@ int main(void) {
     PORTC = 0xFF;
     DDRC = 0x00;
 
-    PORTD = 0x00;
-    DDRD = 0xFF;
+    ENABLE_ENCODER;
+    EICRA = 0x0A;
+    PORTD = 0x0C;
+    DDRD = 0xF3;
 
-    tx_setup(&PORTD, PORTD3, &on_error);
+    tx_setup(&PORTD, DATA_PIN, &on_error);
 
     lcd_setup(&display);
     lcd_init(0x0D);
@@ -131,10 +138,11 @@ int main(void) {
 
     sei();
     while (1) {
-        if (is_pressed(&PINC, UP_CHAR_BTN)) {
-            next_char();
+        if (encoder_status.update_char) {
+            encoder_status.update_char = 0;
             lcd_wr_char(AVAILABLE_CHARS[(unsigned char)current_char]);
             lcd_step_cursor_left();
+            ENABLE_ENCODER;
         }
         if (was_clicked(&PINC, ERASE_CHAR_BTN)) {
             text_buffer[lcd_cursor_pos()] = '\0';
@@ -173,5 +181,21 @@ ISR(TIMER0_COMPA_vect) {
         tx_running = tx_next();
         bit_on(&PORTD, CLOCK_PIN);
         is_rz = 1;
+    }
+}
+
+ISR(INT0_vect) {
+    if (read_bit(&PIND, ENCODER_A) == 0) {
+        DISABLE_ENCODER;
+        next_char();
+        encoder_status.update_char = 1;
+    }
+}
+
+ISR(INT1_vect) {
+    if (read_bit(&PIND, ENCODER_B) == 0) {
+        DISABLE_ENCODER;
+        prev_char();
+        encoder_status.update_char = 1;
     }
 }
